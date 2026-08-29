@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 /* -------------------------------------------------------
    ICONS — one shared line-icon style (24x24, stroke-only,
@@ -132,6 +133,28 @@ function IconClose({ className }: IconProps) {
     <Icon className={className}>
       <path d="M6 6l12 12" />
       <path d="M18 6L6 18" />
+    </Icon>
+  );
+}
+
+function IconShare({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <circle cx="18" cy="5" r="2.5" />
+      <circle cx="6" cy="12" r="2.5" />
+      <circle cx="18" cy="19" r="2.5" />
+      <path d="M8.2 10.7l7.6-4.4" />
+      <path d="M8.2 13.3l7.6 4.4" />
+    </Icon>
+  );
+}
+
+function IconDownload({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M12 4v11" />
+      <path d="M7.5 11.5L12 16l4.5-4.5" />
+      <path d="M5 19.5h14" />
     </Icon>
   );
 }
@@ -1064,6 +1087,343 @@ function ScoreCard({
 }
 
 /* -------------------------------------------------------
+   SHARE CARD — renders a clean, self-contained PNG summary
+   via the Canvas API. No image-export library: canvas ships
+   in every browser, so this stays dependency-free.
+------------------------------------------------------- */
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// Wraps on spaces like normal text, but falls back to a hard
+// character break for any single "word" wider than maxWidth
+// (matters for scripts like Japanese that may have no spaces).
+function wrapText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+): string[] {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let line = "";
+
+  function breakByChar(word: string): string {
+    let chunk = "";
+    for (const ch of word) {
+      const test = chunk + ch;
+      if (ctx.measureText(test).width > maxWidth && chunk) {
+        lines.push(chunk);
+        chunk = ch;
+      } else {
+        chunk = test;
+      }
+    }
+    return chunk;
+  }
+
+  for (const word of words) {
+    const testLine = line ? `${line} ${word}` : word;
+    if (ctx.measureText(testLine).width <= maxWidth) {
+      line = testLine;
+      continue;
+    }
+    if (line) {
+      lines.push(line);
+      line = "";
+    }
+    line =
+      ctx.measureText(word).width <= maxWidth ? word : breakByChar(word);
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function drawLines(
+  ctx: CanvasRenderingContext2D,
+  lines: string[],
+  x: number,
+  y: number,
+  lineHeight: number
+): number {
+  let cursorY = y;
+  for (const line of lines) {
+    ctx.fillText(line, x, cursorY);
+    cursorY += lineHeight;
+  }
+  return cursorY;
+}
+
+type ShareCardData = {
+  sentence: string;
+  targetLanguage: string;
+  scores: InterferenceScores;
+  keyTakeaway: string;
+};
+
+async function drawShareCard(canvas: HTMLCanvasElement, data: ShareCardData) {
+  const width = 1080;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  await document.fonts.ready;
+
+  const rootStyle = getComputedStyle(document.documentElement);
+  const displayFont = rootStyle.getPropertyValue("--font-fraunces") || "serif";
+  const sansFont =
+    rootStyle.getPropertyValue("--font-geist-sans") || "sans-serif";
+
+  const pad = 64;
+  const cardX = pad;
+  const cardY = pad;
+  const cardW = width - pad * 2;
+  const contentW = cardW - 120;
+
+  // First pass: measure only, so the canvas height fits this specific
+  // card's content instead of leaving a fixed, often-empty gap below.
+  ctx.font = `700 46px ${displayFont}`;
+  const sentenceLines = wrapText(ctx, `“${data.sentence}”`, contentW);
+
+  ctx.font = `700 24px ${displayFont}`;
+  const takeawayLines = wrapText(ctx, data.keyTakeaway, contentW - 64);
+  const takeawayBoxHeight = 64 + takeawayLines.length * 32;
+
+  const contentHeight =
+    76 + // header top offset
+    56 + // brand row
+    84 + // target-language badge row
+    sentenceLines.length * 56 +
+    24 + // gap after sentence
+    4 * 78 + // 4 score rows (label + track + gap)
+    14 + // gap before takeaway box
+    takeawayBoxHeight +
+    76; // footer line + bottom breathing room
+
+  const cardH = contentHeight + 40;
+  const height = cardH + pad * 2;
+  canvas.width = width;
+  canvas.height = height;
+
+  const bg = ctx.createLinearGradient(0, 0, width, height);
+  bg.addColorStop(0, "#ccfbf1");
+  bg.addColorStop(0.5, "#fdf6ec");
+  bg.addColorStop(1, "#fecdd3");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.save();
+  ctx.shadowColor = "rgba(194, 65, 12, 0.25)";
+  ctx.shadowBlur = 60;
+  ctx.shadowOffsetY = 30;
+  ctx.fillStyle = "#ffffff";
+  roundRect(ctx, cardX, cardY, cardW, cardH, 40);
+  ctx.fill();
+  ctx.restore();
+
+  const contentX = cardX + 60;
+  let cursorY = cardY + 76;
+
+  ctx.fillStyle = "#1c1917";
+  roundRect(ctx, contentX, cursorY - 38, 56, 56, 14);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.textBaseline = "middle";
+  ctx.font = `700 22px ${sansFont}`;
+  ctx.fillText("LT", contentX + 15, cursorY - 10);
+  ctx.textBaseline = "alphabetic";
+
+  ctx.fillStyle = "#1c1917";
+  ctx.font = `700 30px ${sansFont}`;
+  ctx.fillText("LingoTrace", contentX + 74, cursorY);
+
+  cursorY += 56;
+
+  ctx.fillStyle = "#99f6e4";
+  roundRect(ctx, contentX, cursorY, 210, 44, 22);
+  ctx.fill();
+  ctx.fillStyle = "#0f766e";
+  ctx.font = `700 17px ${sansFont}`;
+  ctx.textBaseline = "middle";
+  ctx.fillText(`Learning ${data.targetLanguage}`, contentX + 18, cursorY + 23);
+  ctx.textBaseline = "alphabetic";
+
+  cursorY += 84;
+
+  ctx.fillStyle = "#1c1917";
+  ctx.font = `700 46px ${displayFont}`;
+  cursorY = drawLines(ctx, sentenceLines, contentX, cursorY, 56) + 24;
+
+  const scoreEntries: [keyof InterferenceScores, string][] = [
+    ["word_order", "Word Order"],
+    ["vocabulary", "Vocabulary"],
+    ["register", "Register"],
+    ["grammar", "Grammar"],
+  ];
+
+  for (const [key, label] of scoreEntries) {
+    const value = Math.max(0, Math.min(100, Math.round(data.scores[key] || 0)));
+
+    ctx.fillStyle = "#44403c";
+    ctx.font = `700 20px ${sansFont}`;
+    ctx.fillText(label, contentX, cursorY);
+
+    ctx.fillStyle = "#1c1917";
+    ctx.font = `800 20px ${sansFont}`;
+    const valueText = String(value);
+    ctx.fillText(valueText, contentX + contentW - ctx.measureText(valueText).width, cursorY);
+
+    cursorY += 16;
+
+    ctx.fillStyle = "#f1f5f4";
+    roundRect(ctx, contentX, cursorY, contentW, 16, 8);
+    ctx.fill();
+
+    const barGradient = ctx.createLinearGradient(contentX, 0, contentX + contentW, 0);
+    barGradient.addColorStop(0, "#2dd4bf");
+    barGradient.addColorStop(0.5, "#fb923c");
+    barGradient.addColorStop(1, "#f43f5e");
+    ctx.fillStyle = barGradient;
+    roundRect(ctx, contentX, cursorY, Math.max(16, (contentW * value) / 100), 16, 8);
+    ctx.fill();
+
+    cursorY += 46;
+  }
+
+  cursorY += 14;
+
+  ctx.fillStyle = "#fef3c7";
+  roundRect(ctx, contentX, cursorY, contentW, takeawayBoxHeight, 24);
+  ctx.fill();
+
+  ctx.fillStyle = "#b45309";
+  ctx.font = `700 14px ${sansFont}`;
+  ctx.fillText("REMEMBER THIS", contentX + 32, cursorY + 34);
+
+  ctx.fillStyle = "#1c1917";
+  ctx.font = `700 24px ${displayFont}`;
+  drawLines(ctx, takeawayLines, contentX + 32, cursorY + 68, 32);
+
+  ctx.fillStyle = "#a8a29e";
+  ctx.font = `600 16px ${sansFont}`;
+  ctx.fillText(
+    "Detected with LingoTrace — cross-linguistic interference analysis",
+    contentX,
+    cardY + cardH - 40
+  );
+}
+
+function ShareModal({
+  sentence,
+  targetLanguage,
+  analysis,
+  onClose,
+}: {
+  sentence: string;
+  targetLanguage: string;
+  analysis: AnalysisResult;
+  onClose: () => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    drawShareCard(canvas, {
+      sentence,
+      targetLanguage,
+      scores: analysis.interference_scores,
+      keyTakeaway: analysis.key_takeaway,
+    }).then(() => {
+      if (!cancelled) setReady(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sentence, targetLanguage, analysis]);
+
+  function handleDownload() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const url = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "lingotrace-result.png";
+    a.click();
+  }
+
+  // Rendered via a portal straight into <body> — this modal is `fixed`,
+  // but a `fixed` element nested inside an ancestor that establishes its
+  // own stacking context (here, <main className="relative z-10">) is
+  // still capped by that ancestor's z-index when compared to unrelated
+  // siblings like <header className="relative z-20">. No z-index value
+  // on the modal itself can escape that; a portal sidesteps it entirely.
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 p-6 backdrop-blur-sm animate-[fade-slide-in_200ms_ease-out]"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[2rem] bg-white p-6 shadow-warm-dark"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-display text-xl font-black">Share your result</h3>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="text-stone-400 transition-colors duration-150 hover:text-stone-800"
+          >
+            <IconClose className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl ring-1 ring-stone-200">
+          <canvas ref={canvasRef} className="block w-full" />
+        </div>
+
+        {!ready && (
+          <p className="mt-3 text-center text-xs text-stone-400">
+            Rendering your card...
+          </p>
+        )}
+
+        <button
+          onClick={handleDownload}
+          disabled={!ready}
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-stone-900 px-6 py-3 font-bold text-white transition duration-150 ease-out hover:scale-[1.02] hover:shadow-warm-md disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <IconDownload className="h-4 w-4" />
+          Download image
+        </button>
+
+        <p className="mt-3 text-center text-xs text-stone-400">
+          Or screenshot this card directly.
+        </p>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* -------------------------------------------------------
    DASHBOARD
 ------------------------------------------------------- */
 
@@ -1093,6 +1453,7 @@ function Dashboard({
     useState<number | null>(null);
 
   const [checked, setChecked] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   if (loading) {
     return (
@@ -1173,8 +1534,18 @@ function Dashboard({
           </h1>
         </div>
 
-        <div className="rounded-full bg-white px-4 py-2 text-sm font-bold text-stone-600 shadow-warm-sm ring-1 ring-stone-200">
-          Learning {targetLanguage}
+        <div className="flex items-center gap-3">
+          <div className="rounded-full bg-white px-4 py-2 text-sm font-bold text-stone-600 shadow-warm-sm ring-1 ring-stone-200">
+            Learning {targetLanguage}
+          </div>
+
+          <button
+            onClick={() => setShareOpen(true)}
+            className="flex items-center gap-2 rounded-full bg-stone-900 px-4 py-2 text-sm font-bold text-white shadow-warm-sm transition duration-150 ease-out hover:scale-[1.02] hover:shadow-warm-md"
+          >
+            <IconShare className="h-4 w-4" />
+            Share result
+          </button>
         </div>
       </div>
 
@@ -1584,6 +1955,15 @@ function Dashboard({
           Trace another sentence →
         </button>
       </div>
+
+      {shareOpen && (
+        <ShareModal
+          sentence={sentence}
+          targetLanguage={targetLanguage}
+          analysis={analysis}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </div>
   );
 }
