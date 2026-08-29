@@ -1531,6 +1531,9 @@ function Dashboard({
   const [selectedIssue, setSelectedIssue] =
     useState<HighlightedToken | null>(null);
 
+  const [miniAnswer, setMiniAnswer] = useState<number | null>(null);
+  const [miniChecked, setMiniChecked] = useState(false);
+
   const [selectedAnswer, setSelectedAnswer] =
     useState<number | null>(null);
 
@@ -1538,28 +1541,256 @@ function Dashboard({
   const [shareOpen, setShareOpen] = useState(false);
 
   if (loading) {
-    return (
-      <div className="flex w-full max-w-2xl flex-1 flex-col items-center justify-center text-center">
-        <div className="relative mb-8 h-20 w-20">
-          <div className="absolute inset-0 animate-ping rounded-full bg-teal-200 opacity-40" />
+  const miniQuestion =
+    targetLanguage === "Mandarin Chinese"
+      ? "Which English sentence sounds more natural?"
+      : targetLanguage === "Japanese"
+      ? "Which sentence sounds more natural in everyday conversation?"
+      : targetLanguage === "Spanish"
+      ? "Which sentence sounds more natural?"
+      : "Which sentence sounds more natural?";
 
-          <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-stone-900 text-2xl text-white">
-            LT
+  const miniOptions =
+    targetLanguage === "Mandarin Chinese"
+      ? [
+          "I very like this.",
+          "I really like this.",
+          "I like very this.",
+        ]
+      : targetLanguage === "Japanese"
+      ? [
+          "I am like this.",
+          "I really like this.",
+          "Really I like this.",
+        ]
+      : targetLanguage === "Spanish"
+      ? [
+          "I really like this.",
+          "I like really this.",
+          "Really I this like.",
+        ]
+      : [
+          "I very like this.",
+          "I really like this.",
+          "I like very this.",
+        ];
+
+  const correctMiniAnswer = 1;
+
+  return (
+    <div className="flex w-full max-w-4xl flex-1 flex-col justify-center py-8">
+      {/* ------------------------------------------------
+          LOADING HEADER
+      ------------------------------------------------ */}
+
+      <div className="text-center">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-stone-900 text-xl font-black text-white shadow-xl shadow-stone-300">
+          <span className="animate-pulse">LT</span>
+        </div>
+
+        <p className="mt-7 text-xs font-black uppercase tracking-[0.22em] text-teal-600">
+          LingoTrace is working
+        </p>
+
+        <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
+          Tracing your language fingerprint...
+        </h2>
+
+        <p className="mx-auto mt-3 max-w-xl text-stone-500">
+          While we compare your sentence with the languages you
+          know, try this tiny challenge.
+        </p>
+      </div>
+
+      {/* ------------------------------------------------
+          PROGRESS
+      ------------------------------------------------ */}
+
+      <div className="mx-auto mt-8 w-full max-w-2xl">
+        <div className="flex items-center justify-between text-xs font-bold text-stone-400">
+          <span>Analyzing</span>
+          <span className="animate-pulse">Working...</span>
+        </div>
+
+        <div className="mt-2 h-3 overflow-hidden rounded-full bg-stone-200">
+          <div className="h-full w-[72%] animate-[loadingBar_2.8s_ease-in-out_infinite] rounded-full bg-gradient-to-r from-teal-400 via-orange-400 to-rose-500" />
+        </div>
+
+        <div className="mt-4 grid grid-cols-4 gap-2">
+          <div className="text-center text-[10px] font-bold text-teal-600">
+            <div className="mx-auto mb-1 flex h-7 w-7 items-center justify-center rounded-full bg-teal-100">
+              ✓
+            </div>
+            Sentence
+          </div>
+
+          <div className="text-center text-[10px] font-bold text-teal-600">
+            <div className="mx-auto mb-1 flex h-7 w-7 items-center justify-center rounded-full bg-teal-100">
+              ✓
+            </div>
+            Vocabulary
+          </div>
+
+          <div className="text-center text-[10px] font-bold text-orange-500">
+            <div className="mx-auto mb-1 flex h-7 w-7 animate-pulse items-center justify-center rounded-full bg-orange-100">
+              •
+            </div>
+            Grammar
+          </div>
+
+          <div className="text-center text-[10px] font-bold text-stone-300">
+            <div className="mx-auto mb-1 flex h-7 w-7 items-center justify-center rounded-full bg-stone-100">
+              ○
+            </div>
+            Insights
+          </div>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------
+          INTERACTIVE MINI CHALLENGE
+      ------------------------------------------------ */}
+
+      <div className="mx-auto mt-8 w-full max-w-2xl overflow-hidden rounded-[2rem] bg-white shadow-xl ring-1 ring-stone-200">
+        <div className="border-b border-stone-100 bg-gradient-to-r from-teal-50 to-orange-50 px-6 py-5 sm:px-7">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-teal-600">
+                While we trace
+              </p>
+
+              <h3 className="mt-1 text-xl font-black text-stone-900">
+                Quick language challenge
+              </h3>
+            </div>
+
+            <div className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-stone-500 shadow-sm">
+              +1 learning point
+            </div>
           </div>
         </div>
 
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-600">
-          LingoTrace is thinking
-        </p>
+        <div className="p-6 sm:p-7">
+          <p className="text-sm font-bold text-stone-400">
+            {targetLanguage}
+          </p>
 
-        <h2 className="font-display mt-3 text-3xl font-black">
-          Tracing your languages...
-        </h2>
+          <p className="mt-2 text-lg font-bold leading-7 text-stone-800">
+            {miniQuestion}
+          </p>
 
-        <AnalyzingStatus />
+          <div className="mt-5 grid gap-3">
+            {miniOptions.map((option, index) => {
+              const isSelected = miniAnswer === index;
+              const isCorrect =
+                miniChecked && index === correctMiniAnswer;
+
+              let optionClass =
+                "border-stone-200 bg-stone-50 hover:border-teal-300 hover:bg-teal-50";
+
+              if (!miniChecked && isSelected) {
+                optionClass =
+                  "border-teal-400 bg-teal-50 ring-2 ring-teal-100";
+              }
+
+              if (miniChecked && isCorrect) {
+                optionClass =
+                  "border-emerald-400 bg-emerald-50";
+              }
+
+              if (
+                miniChecked &&
+                isSelected &&
+                index !== correctMiniAnswer
+              ) {
+                optionClass =
+                  "border-rose-300 bg-rose-50";
+              }
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  disabled={miniChecked}
+                  onClick={() => setMiniAnswer(index)}
+                  className={`rounded-2xl border p-4 text-left text-sm font-semibold text-stone-700 transition ${optionClass}`}
+                >
+                  <span className="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-black shadow-sm">
+                    {String.fromCharCode(65 + index)}
+                  </span>
+
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+
+          {!miniChecked ? (
+            <button
+              type="button"
+              disabled={miniAnswer === null}
+              onClick={() => setMiniChecked(true)}
+              className="mt-5 rounded-xl bg-stone-900 px-6 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
+            >
+              Check answer
+            </button>
+          ) : (
+            <div
+              className={`mt-5 rounded-2xl p-4 ${
+                miniAnswer === correctMiniAnswer
+                  ? "bg-emerald-50 text-emerald-800"
+                  : "bg-amber-50 text-amber-800"
+              }`}
+            >
+              <p className="font-black">
+                {miniAnswer === correctMiniAnswer
+                  ? "🎉 Nice! You spotted it."
+                  : "Almost! The natural choice is B."}
+              </p>
+
+              <p className="mt-1 text-sm leading-6 opacity-80">
+                Natural English usually uses “really like”
+                rather than “very like.”
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-    );
-  }
+
+      {/* ------------------------------------------------
+          CURRENT SENTENCE
+      ------------------------------------------------ */}
+
+      <div className="mx-auto mt-5 flex w-full max-w-2xl items-center gap-4 rounded-2xl border border-stone-200 bg-white/70 p-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-stone-100 text-sm">
+          ✦
+        </div>
+
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-wider text-stone-400">
+            Your sentence
+          </p>
+
+          <p className="mt-1 truncate text-sm font-bold text-stone-700">
+            “{sentence}”
+          </p>
+        </div>
+
+        <div className="ml-auto hidden text-xs font-bold text-stone-300 sm:block">
+          {targetLanguage}
+        </div>
+      </div>
+
+      {/* ------------------------------------------------
+          SMALL FOOTER
+      ------------------------------------------------ */}
+
+      <p className="mt-6 text-center text-xs font-medium text-stone-400">
+        Your answer is being analyzed securely on the server.
+      </p>
+    </div>
+  );
+}
 
   if (error) {
     return (
