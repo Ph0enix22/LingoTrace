@@ -1,6 +1,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
 
+export const maxDuration = 60;
+
 const MAX_SENTENCE_LENGTH = 2000;
 const MAX_LANGUAGES = 10;
 const MAX_CACHE_ENTRIES = 50;
