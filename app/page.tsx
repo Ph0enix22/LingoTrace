@@ -1,6 +1,177 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+/* -------------------------------------------------------
+   VOICE INPUT (Web Speech API) — minimal local typings so
+   we don't need a @types package for an experimental API.
+------------------------------------------------------- */
+
+interface SpeechRecognitionResultLike {
+  [index: number]: { transcript: string };
+}
+
+interface SpeechRecognitionEventLike extends Event {
+  results: ArrayLike<SpeechRecognitionResultLike>;
+}
+
+interface SpeechRecognitionErrorEventLike extends Event {
+  error: string;
+}
+
+interface SpeechRecognitionLike extends EventTarget {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
+  onend: (() => void) | null;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition?: new () => SpeechRecognitionLike;
+    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+  }
+}
+
+// Maps our language picker labels to BCP-47 recognition locales.
+const MIC_LANGUAGE_MAP: Record<string, string> = {
+  English: "en-US",
+  Hindi: "hi-IN",
+  Kannada: "kn-IN",
+  Tamil: "ta-IN",
+  Telugu: "te-IN",
+  Bengali: "bn-IN",
+  Marathi: "mr-IN",
+  Urdu: "ur-IN",
+  Spanish: "es-ES",
+  French: "fr-FR",
+  German: "de-DE",
+  Portuguese: "pt-PT",
+  "Mandarin Chinese": "zh-CN",
+  Japanese: "ja-JP",
+  Korean: "ko-KR",
+  Arabic: "ar-SA",
+  Russian: "ru-RU",
+  Italian: "it-IT",
+};
+
+function MicButton({
+  targetLanguage,
+  onTranscript,
+}: {
+  targetLanguage: string;
+  onTranscript: (text: string) => void;
+}) {
+  const [supported, setSupported] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+
+  useEffect(() => {
+    // Feature detection has to happen post-mount, not during render: `window`
+    // doesn't exist on the server, and computing this during the client's
+    // first render (e.g. via a useState initializer) would mismatch the
+    // server-rendered HTML and trigger a hydration error.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSupported(
+      typeof window !== "undefined" &&
+        !!(window.SpeechRecognition || window.webkitSpeechRecognition)
+    );
+
+    return () => {
+      recognitionRef.current?.stop();
+    };
+  }, []);
+
+  if (!supported) return null;
+
+  function handleClick() {
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Ctor) return;
+
+    const recognition = new Ctor();
+    recognition.lang = MIC_LANGUAGE_MAP[targetLanguage] ?? "";
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? "";
+      if (transcript) onTranscript(transcript);
+      setListening(false);
+    };
+
+    recognition.onerror = (event) => {
+      setPermissionError(
+        event.error === "not-allowed" || event.error === "permission-denied"
+          ? "Microphone access was denied. You can still type your answer."
+          : "Voice input didn't catch that — please try again or type instead."
+      );
+      setListening(false);
+    };
+
+    recognition.onend = () => setListening(false);
+
+    recognitionRef.current = recognition;
+    setPermissionError(null);
+    setListening(true);
+    recognition.start();
+  }
+
+  return (
+    <div className="absolute right-4 top-4 flex flex-col items-end gap-2">
+      <button
+        type="button"
+        onClick={handleClick}
+        aria-label={listening ? "Stop voice input" : "Start voice input"}
+        title={listening ? "Stop voice input" : "Speak your answer"}
+        className={`flex h-11 w-11 items-center justify-center rounded-full shadow-sm ring-1 transition ${
+          listening
+            ? "bg-rose-500 text-white ring-rose-500 animate-pulse"
+            : "bg-white text-stone-500 ring-stone-200 hover:text-stone-800 hover:ring-stone-300 dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700 dark:hover:text-white"
+        }`}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-5 w-5"
+        >
+          <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
+          <path d="M19 11a7 7 0 0 1-14 0" />
+          <path d="M12 18v3" />
+        </svg>
+      </button>
+
+      {listening && (
+        <span className="flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-600 shadow-sm dark:bg-rose-500/10 dark:text-rose-300">
+          <span className="h-1.5 w-1.5 animate-ping rounded-full bg-rose-500" />
+          Listening...
+        </span>
+      )}
+
+      {!listening && permissionError && (
+        <span className="max-w-[220px] rounded-xl bg-amber-50 px-3 py-2 text-right text-xs font-medium text-amber-700 shadow-sm dark:bg-amber-500/10 dark:text-amber-300">
+          {permissionError}
+        </span>
+      )}
+    </div>
+  );
+}
 
 type Screen = "landing" | "profile" | "challenge" | "dashboard";
 
@@ -75,6 +246,58 @@ const LANGUAGES = [
 ];
 
 const CHALLENGE_PROMPT = "Introduce yourself to a new friend.";
+
+type Sample = {
+  label: string;
+  knownLanguages: string[];
+  targetLanguage: string;
+  sentence: string;
+};
+
+const SAMPLES: Sample[] = [
+  {
+    label: "English + Hindi → Korean",
+    knownLanguages: ["English", "Hindi"],
+    targetLanguage: "Korean",
+    sentence: "나는 매우 배고픈입니다 그리고 나는 밥을 먹고 싶다",
+  },
+  {
+    label: "English + Tamil → Japanese",
+    knownLanguages: ["English", "Tamil"],
+    targetLanguage: "Japanese",
+    sentence: "わたしは とても うれしい です そして わたしは がっこうに いきたい です",
+  },
+  {
+    label: "English + Spanish → French",
+    knownLanguages: ["English", "Spanish"],
+    targetLanguage: "French",
+    sentence: "Je suis très excité pour voir mes amis nouveaux demain.",
+  },
+];
+
+const ANALYSIS_STEPS = [
+  "Checking word order...",
+  "Checking vocabulary...",
+  "Checking register...",
+  "Checking grammar...",
+];
+
+function AnalyzingStatus() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setIndex((i) => (i + 1) % ANALYSIS_STEPS.length);
+    }, 2200);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <p className="mt-3 max-w-md text-stone-500 transition-opacity duration-300">
+      {ANALYSIS_STEPS[index]}
+    </p>
+  );
+}
 
 const SCORE_META: Record<
   keyof InterferenceScores,
@@ -168,6 +391,12 @@ export default function Home() {
     }
   }
 
+  function handleUseSample(sample: Sample) {
+    setKnownLanguages(sample.knownLanguages);
+    setTargetLanguage(sample.targetLanguage);
+    setSentence(sample.sentence);
+  }
+
   function handleTryAnother() {
     setSentence("");
     setAnalysis(null);
@@ -235,6 +464,7 @@ export default function Home() {
             onChangeSentence={setSentence}
             onBack={() => setScreen("profile")}
             onAnalyze={handleAnalyze}
+            onUseSample={handleUseSample}
           />
         )}
 
@@ -464,12 +694,14 @@ function Challenge({
   onChangeSentence,
   onBack,
   onAnalyze,
+  onUseSample,
 }: {
   targetLanguage: string;
   sentence: string;
   onChangeSentence: (s: string) => void;
   onBack: () => void;
   onAnalyze: () => void;
+  onUseSample: (sample: Sample) => void;
 }) {
   return (
     <div className="flex w-full max-w-3xl flex-1 flex-col justify-center py-10">
@@ -486,7 +718,23 @@ function Challenge({
         you would naturally say it.
       </p>
 
-      <div className="mt-8 overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-stone-200">
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
+          Try a sample:
+        </span>
+        {SAMPLES.map((sample) => (
+          <button
+            key={sample.label}
+            type="button"
+            onClick={() => onUseSample(sample)}
+            className="rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-stone-600 shadow-sm ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:ring-teal-300"
+          >
+            {sample.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-6 overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-stone-200">
         <div className="border-b border-stone-100 bg-stone-50 px-7 py-5">
           <span className="rounded-full bg-teal-100 px-3 py-1.5 text-xs font-bold text-teal-700">
             {targetLanguage}
@@ -497,14 +745,17 @@ function Challenge({
           </p>
         </div>
 
-        <textarea
-          value={sentence}
-          onChange={(e) => onChangeSentence(e.target.value)}
-          placeholder={`Write your response in ${targetLanguage}...`}
-          rows={7}
-          className="w-full resize-none border-0 p-7 text-xl outline-none placeholder:text-stone-300"
-          autoFocus
-        />
+        <div className="relative">
+          <textarea
+            value={sentence}
+            onChange={(e) => onChangeSentence(e.target.value)}
+            placeholder={`Write your response in ${targetLanguage}...`}
+            rows={7}
+            className="w-full resize-none border-0 p-7 pr-20 text-xl outline-none placeholder:text-stone-300"
+            autoFocus
+          />
+          <MicButton targetLanguage={targetLanguage} onTranscript={onChangeSentence} />
+        </div>
 
         <div className="flex items-center justify-between border-t border-stone-100 px-7 py-5">
           <span className="text-xs text-stone-400">
@@ -636,10 +887,7 @@ function Dashboard({
           Tracing your languages...
         </h2>
 
-        <p className="mt-3 max-w-md text-stone-500">
-          We&apos;re comparing word order, vocabulary,
-          grammar, and register.
-        </p>
+        <AnalyzingStatus />
       </div>
     );
   }

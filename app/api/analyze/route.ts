@@ -3,6 +3,24 @@ import { NextRequest, NextResponse } from "next/server";
 
 const MAX_SENTENCE_LENGTH = 2000;
 const MAX_LANGUAGES = 10;
+const MAX_CACHE_ENTRIES = 50;
+
+// In-memory cache so repeated/rehearsed demo inputs return instantly
+// on the 2nd+ call instead of hitting Gemini again. Resets on server
+// restart — fine for a demo, not meant to survive deploys.
+const analysisCache = new Map<string, unknown>();
+
+function buildCacheKey(
+  languages: string[],
+  target: string,
+  sentence: string
+) {
+  return JSON.stringify({
+    languages: [...languages].map((l) => l.toLowerCase()).sort(),
+    target: target.toLowerCase(),
+    sentence,
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -93,6 +111,14 @@ export async function POST(req: NextRequest) {
 
     const target = targetLanguage.trim();
     const learnerSentence = sentence.trim();
+
+    const cacheKey = buildCacheKey(languages, target, learnerSentence);
+    const cached = analysisCache.get(cacheKey);
+
+    if (cached) {
+      console.log("⚡ Cache hit, skipping Gemini call.");
+      return NextResponse.json(cached);
+    }
 
     const ai = new GoogleGenAI({
       apiKey,
@@ -505,6 +531,12 @@ Be linguistically cautious. Distinguish genuine cross-linguistic interference fr
     }
 
     console.log("✅ Analysis completed successfully.");
+
+    if (analysisCache.size >= MAX_CACHE_ENTRIES) {
+      const oldestKey = analysisCache.keys().next().value;
+      if (oldestKey !== undefined) analysisCache.delete(oldestKey);
+    }
+    analysisCache.set(cacheKey, result);
 
     return NextResponse.json(result);
   } catch (error: unknown) {
