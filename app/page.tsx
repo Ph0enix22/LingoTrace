@@ -159,6 +159,32 @@ function IconDownload({ className }: IconProps) {
   );
 }
 
+function IconTrendDown({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M7 7l10 10" />
+      <path d="M17 9V17H9" />
+    </Icon>
+  );
+}
+
+function IconTrendUp({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M7 17L17 7" />
+      <path d="M9 7h8v8" />
+    </Icon>
+  );
+}
+
+function IconMinus({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M6 12h12" />
+    </Icon>
+  );
+}
+
 function IconAlert({ className }: IconProps) {
   return (
     <Icon className={className}>
@@ -480,6 +506,13 @@ function AnalyzingStatus() {
   );
 }
 
+function overallAverage(scores: InterferenceScores): number {
+  return (
+    (scores.word_order + scores.vocabulary + scores.register + scores.grammar) /
+    4
+  );
+}
+
 const SCORE_META: Record<
   keyof InterferenceScores,
   {
@@ -514,6 +547,7 @@ export default function Home() {
   const [scenario, setScenario] = useState<Scenario>(SCENARIOS[0]);
 
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [sessionHistory, setSessionHistory] = useState<InterferenceScores[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -560,7 +594,9 @@ export default function Home() {
         );
       }
 
-      setAnalysis(data as AnalysisResult);
+      const result = data as AnalysisResult;
+      setAnalysis(result);
+      setSessionHistory((prev) => [...prev, result.interference_scores]);
     } catch (err) {
       console.error(err);
 
@@ -593,6 +629,7 @@ export default function Home() {
     setSentence("");
     setScenario(SCENARIOS[0]);
     setAnalysis(null);
+    setSessionHistory([]);
     setError(null);
     setScreen("landing");
   }
@@ -661,6 +698,7 @@ export default function Home() {
             loading={loading}
             error={error}
             analysis={analysis}
+            sessionHistory={sessionHistory}
             onRetry={handleAnalyze}
             onTryAnother={handleTryAnother}
             onStartOver={handleStartOver}
@@ -1427,12 +1465,55 @@ function ShareModal({
    DASHBOARD
 ------------------------------------------------------- */
 
+function SessionRecap({ sessionHistory }: { sessionHistory: InterferenceScores[] }) {
+  if (sessionHistory.length < 2) return null;
+
+  const current = overallAverage(sessionHistory[sessionHistory.length - 1]);
+  const previous = overallAverage(sessionHistory[sessionHistory.length - 2]);
+  const delta = Math.round(current - previous);
+
+  let TrendIcon = IconMinus;
+  let trendColor = "text-stone-500";
+  let trendText = "About the same as your last sentence.";
+
+  if (delta <= -3) {
+    TrendIcon = IconTrendDown;
+    trendColor = "text-emerald-600";
+    trendText = `Down ${Math.abs(delta)} pts vs your last sentence — nice.`;
+  } else if (delta >= 3) {
+    TrendIcon = IconTrendUp;
+    trendColor = "text-amber-600";
+    trendText = `Up ${delta} pts vs your last sentence.`;
+  }
+
+  return (
+    <div className="mb-8 flex flex-wrap items-center gap-4 rounded-2xl bg-white px-6 py-4 shadow-warm-sm ring-1 ring-stone-200">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-100 text-xs font-black text-teal-700">
+          {sessionHistory.length}
+        </span>
+        <p className="text-sm font-bold text-stone-700">
+          sentences analyzed this session
+        </p>
+      </div>
+
+      <div className="hidden h-4 w-px bg-stone-200 sm:block" />
+
+      <div className={`flex items-center gap-1.5 text-sm font-bold ${trendColor}`}>
+        <TrendIcon className="h-4 w-4" />
+        {trendText}
+      </div>
+    </div>
+  );
+}
+
 function Dashboard({
   sentence,
   targetLanguage,
   loading,
   error,
   analysis,
+  sessionHistory,
   onRetry,
   onTryAnother,
   onStartOver,
@@ -1442,6 +1523,7 @@ function Dashboard({
   loading: boolean;
   error: string | null;
   analysis: AnalysisResult | null;
+  sessionHistory: InterferenceScores[];
   onRetry: () => void;
   onTryAnother: () => void;
   onStartOver: () => void;
@@ -1548,6 +1630,8 @@ function Dashboard({
           </button>
         </div>
       </div>
+
+      <SessionRecap sessionHistory={sessionHistory} />
 
       {/* Sentence hero */}
       <section className="relative overflow-hidden rounded-[2rem] bg-stone-900 p-7 text-white shadow-warm-dark sm:p-10">
