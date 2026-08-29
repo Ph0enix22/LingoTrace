@@ -196,3 +196,19 @@ a {
     scroll-behavior: auto !important;
   }
 }
+@keyframes loadingBar {
+  0% {
+    width: 15%;
+    transform: translateX(-20%);
+  }
+
+  50% {
+    width: 75%;
+    transform: translateX(15%);
+  }
+
+  100% {
+    width: 90%;
+    transform: translateX(5%);
+  }
+}
