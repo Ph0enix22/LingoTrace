@@ -1,6 +1,150 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+
+/* -------------------------------------------------------
+   ICONS — one shared line-icon style (24x24, stroke-only,
+   currentColor, round caps/joins) used everywhere an icon
+   appears: score categories, panel headers, the mic button,
+   chip checkmarks, and status glyphs. Nothing here mixes in
+   emoji or a second icon style.
+------------------------------------------------------- */
+
+function Icon({
+  children,
+  className = "h-5 w-5",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      {children}
+    </svg>
+  );
+}
+
+type IconProps = { className?: string };
+
+function IconMic({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
+      <path d="M19 11a7 7 0 0 1-14 0" />
+      <path d="M12 18v3" />
+    </Icon>
+  );
+}
+
+function IconSwap({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M3 12h18" />
+      <path d="M16 7l5 5-5 5" />
+      <path d="M8 7L3 12l5 5" />
+    </Icon>
+  );
+}
+
+function IconBookOpen({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M12 6.5c-1.6-1.3-3.9-1.8-6.5-1.8a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1c2.6 0 4.9.5 6.5 1.8 1.6-1.3 3.9-1.8 6.5-1.8a1 1 0 0 0 1-1v-11a1 1 0 0 0-1-1c-2.6 0-4.9.5-6.5 1.8Z" />
+      <path d="M12 6.5v13" />
+    </Icon>
+  );
+}
+
+function IconMessageCircle({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" />
+    </Icon>
+  );
+}
+
+function IconCheckSquare({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <rect x="3" y="3" width="18" height="18" rx="3" />
+      <path d="M8 12.5l2.5 2.5L16 9.5" />
+    </Icon>
+  );
+}
+
+function IconGlobe({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3c2.5 2.6 3.8 5.9 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.9-3.8-9s1.3-6.4 3.8-9Z" />
+    </Icon>
+  );
+}
+
+function IconTarget({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+    </Icon>
+  );
+}
+
+function IconCheck({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M5 12.5l4.5 4.5L19 7" />
+    </Icon>
+  );
+}
+
+function IconCheckCircle({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8 12.5l2.5 2.5L16 9.5" />
+    </Icon>
+  );
+}
+
+function IconVolume({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M4 9v6h4l5 4V5L8 9H4Z" />
+      <path d="M16.5 8.5a5 5 0 0 1 0 7" />
+      <path d="M19 6a8.5 8.5 0 0 1 0 12" />
+    </Icon>
+  );
+}
+
+function IconClose({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M6 6l12 12" />
+      <path d="M18 6L6 18" />
+    </Icon>
+  );
+}
+
+function IconAlert({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M10.3 3.9 2.7 17.5A2 2 0 0 0 4.4 20.5h15.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </Icon>
+  );
+}
 
 /* -------------------------------------------------------
    VOICE INPUT (Web Speech API) — minimal local typings so
@@ -135,37 +279,24 @@ function MicButton({
         onClick={handleClick}
         aria-label={listening ? "Stop voice input" : "Start voice input"}
         title={listening ? "Stop voice input" : "Speak your answer"}
-        className={`flex h-11 w-11 items-center justify-center rounded-full shadow-sm ring-1 transition ${
+        className={`flex h-11 w-11 items-center justify-center rounded-full shadow-warm-sm ring-1 transition duration-150 ease-out hover:scale-[1.02] ${
           listening
             ? "bg-rose-500 text-white ring-rose-500 animate-pulse"
-            : "bg-white text-stone-500 ring-stone-200 hover:text-stone-800 hover:ring-stone-300 dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700 dark:hover:text-white"
+            : "bg-white text-stone-500 ring-stone-200 hover:text-stone-800 hover:ring-stone-300"
         }`}
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
-          <path d="M19 11a7 7 0 0 1-14 0" />
-          <path d="M12 18v3" />
-        </svg>
+        <IconMic className="h-5 w-5" />
       </button>
 
       {listening && (
-        <span className="flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-600 shadow-sm dark:bg-rose-500/10 dark:text-rose-300">
+        <span className="flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-600 shadow-warm-sm">
           <span className="h-1.5 w-1.5 animate-ping rounded-full bg-rose-500" />
           Listening...
         </span>
       )}
 
       {!listening && permissionError && (
-        <span className="max-w-[220px] rounded-xl bg-amber-50 px-3 py-2 text-right text-xs font-medium text-amber-700 shadow-sm dark:bg-amber-500/10 dark:text-amber-300">
+        <span className="max-w-[220px] rounded-xl bg-amber-50 px-3 py-2 text-right text-xs font-medium text-amber-700 shadow-warm-sm">
           {permissionError}
         </span>
       )}
@@ -303,24 +434,24 @@ const SCORE_META: Record<
   keyof InterferenceScores,
   {
     label: string;
-    icon: string;
+    icon: (props: IconProps) => ReactNode;
   }
 > = {
   word_order: {
     label: "Word Order",
-    icon: "↔",
+    icon: IconSwap,
   },
   vocabulary: {
     label: "Vocabulary",
-    icon: "Aa",
+    icon: IconBookOpen,
   },
   register: {
     label: "Register",
-    icon: "◌",
+    icon: IconMessageCircle,
   },
   grammar: {
     label: "Grammar",
-    icon: "文",
+    icon: IconCheckSquare,
   },
 };
 
@@ -435,7 +566,7 @@ export default function Home() {
         </button>
 
         {screen !== "landing" && (
-          <span className="hidden rounded-full bg-white px-4 py-2 text-xs font-semibold text-stone-500 shadow-sm ring-1 ring-stone-200 sm:block">
+          <span className="hidden rounded-full bg-white px-4 py-2 text-xs font-semibold text-stone-500 shadow-warm-sm ring-1 ring-stone-200 sm:block">
             Cross-Linguistic Learning
           </span>
         )}
@@ -492,11 +623,11 @@ export default function Home() {
 function Landing({ onStart }: { onStart: () => void }) {
   return (
     <div className="flex w-full max-w-5xl flex-1 flex-col items-center justify-center py-12 text-center">
-      <div className="mb-7 rounded-full border border-teal-200 bg-white/80 px-4 py-2 text-sm font-semibold text-teal-700 shadow-sm">
+      <div className="mb-7 rounded-full border border-teal-200 bg-white/80 px-4 py-2 text-sm font-semibold text-teal-700 shadow-warm-sm">
         LingoTrace · Language Transfer Intelligence
       </div>
 
-      <h1 className="max-w-4xl text-5xl font-black leading-[1.02] tracking-[-0.04em] text-stone-900 sm:text-7xl">
+      <h1 className="font-display max-w-4xl text-5xl font-black leading-[1.02] tracking-[-0.02em] text-stone-900 sm:text-7xl">
         Your other languages are
         <span className="block bg-gradient-to-r from-orange-500 via-rose-500 to-violet-500 bg-clip-text text-transparent">
           already in the room.
@@ -509,26 +640,26 @@ function Landing({ onStart }: { onStart: () => void }) {
       </p>
 
       <div className="mt-9 flex flex-wrap justify-center gap-2 text-sm text-stone-400">
-        <span className="rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-stone-200">
+        <span className="rounded-full bg-white px-4 py-2 shadow-warm-sm ring-1 ring-stone-200">
           English
         </span>
-        <span className="rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-stone-200">
+        <span className="rounded-full bg-white px-4 py-2 shadow-warm-sm ring-1 ring-stone-200">
           हिन्दी
         </span>
-        <span className="rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-stone-200">
+        <span className="rounded-full bg-white px-4 py-2 shadow-warm-sm ring-1 ring-stone-200">
           ಕನ್ನಡ
         </span>
-        <span className="rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-stone-200">
+        <span className="rounded-full bg-white px-4 py-2 shadow-warm-sm ring-1 ring-stone-200">
           中文
         </span>
-        <span className="rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-stone-200">
+        <span className="rounded-full bg-white px-4 py-2 shadow-warm-sm ring-1 ring-stone-200">
           日本語
         </span>
       </div>
 
       <button
         onClick={onStart}
-        className="mt-10 rounded-2xl bg-stone-900 px-9 py-4 text-base font-bold text-white shadow-xl shadow-stone-300 transition hover:-translate-y-1 hover:shadow-2xl active:translate-y-0"
+        className="mt-10 rounded-2xl bg-stone-900 px-9 py-4 text-base font-bold text-white shadow-warm-md transition duration-150 ease-out hover:scale-[1.02] hover:shadow-warm-lg"
       >
         Start tracing
         <span className="ml-3">→</span>
@@ -554,13 +685,13 @@ function LanguageChip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+      className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors duration-300 ease-out ${
         selected
-          ? "bg-stone-900 text-white shadow-lg shadow-stone-200"
-          : "bg-white text-stone-600 shadow-sm ring-1 ring-stone-200 hover:-translate-y-0.5 hover:ring-stone-300"
+          ? "bg-stone-900 text-white shadow-warm-md"
+          : "bg-white text-stone-600 shadow-warm-sm ring-1 ring-stone-200 hover:-translate-y-0.5 hover:ring-stone-300"
       }`}
     >
-      {selected && <span className="mr-1.5">✓</span>}
+      {selected && <IconCheck className="h-3.5 w-3.5" />}
       {label}
     </button>
   );
@@ -595,7 +726,7 @@ function Profile({
           Step 01 · Your language profile
         </p>
 
-        <h2 className="text-4xl font-black tracking-tight text-stone-900">
+        <h2 className="font-display text-4xl font-black tracking-tight text-stone-900">
           Tell us where your language journey starts.
         </h2>
 
@@ -606,11 +737,11 @@ function Profile({
       </div>
 
       <div className="grid gap-8 md:grid-cols-2">
-        <div className="rounded-3xl bg-white p-7 shadow-sm ring-1 ring-stone-200">
+        <div className="rounded-3xl bg-white p-7 shadow-warm-sm ring-1 ring-stone-200">
           <div className="mb-5">
-            <span className="text-2xl">🌍</span>
+            <IconGlobe className="h-6 w-6 text-teal-600" />
 
-            <h3 className="mt-4 text-xl font-bold">
+            <h3 className="font-display mt-4 text-xl font-bold">
               Languages you know
             </h3>
 
@@ -631,11 +762,11 @@ function Profile({
           </div>
         </div>
 
-        <div className="rounded-3xl bg-stone-900 p-7 text-white shadow-xl">
+        <div className="rounded-3xl bg-stone-900 p-7 text-white shadow-warm-dark">
           <div className="mb-5">
-            <span className="text-2xl">🎯</span>
+            <IconTarget className="h-6 w-6 text-white/80" />
 
-            <h3 className="mt-4 text-xl font-bold">
+            <h3 className="font-display mt-4 text-xl font-bold">
               Your target language
             </h3>
 
@@ -650,13 +781,13 @@ function Profile({
                 key={lang}
                 type="button"
                 onClick={() => onSelectTarget(lang)}
-                className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors duration-300 ease-out ${
                   targetLanguage === lang
                     ? "bg-white text-stone-900"
                     : "bg-white/10 text-stone-300 hover:bg-white/20"
                 }`}
               >
-                {targetLanguage === lang && "✓ "}
+                {targetLanguage === lang && <IconCheck className="h-3.5 w-3.5" />}
                 {lang}
               </button>
             ))}
@@ -667,7 +798,7 @@ function Profile({
       <div className="mt-9 flex items-center justify-between">
         <button
           onClick={onBack}
-          className="font-semibold text-stone-400 transition hover:text-stone-700"
+          className="font-semibold text-stone-400 transition-colors duration-150 hover:text-stone-700"
         >
           ← Back
         </button>
@@ -675,7 +806,7 @@ function Profile({
         <button
           onClick={onContinue}
           disabled={!canContinue}
-          className="rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-7 py-3.5 font-bold text-white shadow-lg transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:from-stone-200 disabled:to-stone-200 disabled:text-stone-400 disabled:shadow-none"
+          className="rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-7 py-3.5 font-bold text-white shadow-warm-md transition duration-150 ease-out hover:scale-[1.02] hover:shadow-warm-lg disabled:cursor-not-allowed disabled:scale-100 disabled:from-stone-200 disabled:to-stone-200 disabled:text-stone-400 disabled:shadow-none"
         >
           Continue →
         </button>
@@ -709,7 +840,7 @@ function Challenge({
         Step 02 · Write naturally
       </p>
 
-      <h2 className="text-4xl font-black tracking-tight">
+      <h2 className="font-display text-4xl font-black tracking-tight">
         Let&apos;s see how your languages show up.
       </h2>
 
@@ -727,14 +858,14 @@ function Challenge({
             key={sample.label}
             type="button"
             onClick={() => onUseSample(sample)}
-            className="rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-stone-600 shadow-sm ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:ring-teal-300"
+            className="rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-stone-600 shadow-warm-sm ring-1 ring-stone-200 transition duration-150 ease-out hover:scale-[1.02] hover:ring-teal-300"
           >
             {sample.label}
           </button>
         ))}
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-stone-200">
+      <div className="mt-6 overflow-hidden rounded-3xl bg-white shadow-warm-lg ring-1 ring-stone-200">
         <div className="border-b border-stone-100 bg-stone-50 px-7 py-5">
           <span className="rounded-full bg-teal-100 px-3 py-1.5 text-xs font-bold text-teal-700">
             {targetLanguage}
@@ -765,7 +896,7 @@ function Challenge({
           <button
             onClick={onAnalyze}
             disabled={!sentence.trim()}
-            className="rounded-xl bg-stone-900 px-7 py-3 font-bold text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
+            className="rounded-xl bg-stone-900 px-7 py-3 font-bold text-white transition duration-150 ease-out hover:scale-[1.02] hover:shadow-warm-md disabled:cursor-not-allowed disabled:scale-100 disabled:bg-stone-200 disabled:text-stone-400 disabled:shadow-none"
           >
             Trace my sentence →
           </button>
@@ -774,7 +905,7 @@ function Challenge({
 
       <button
         onClick={onBack}
-        className="mt-6 w-fit font-semibold text-stone-400 hover:text-stone-700"
+        className="mt-6 w-fit font-semibold text-stone-400 transition-colors duration-150 hover:text-stone-700"
       >
         ← Back
       </button>
@@ -794,6 +925,7 @@ function ScoreCard({
   value: number;
 }) {
   const meta = SCORE_META[scoreKey];
+  const ScoreIcon = meta.icon;
 
   const score = Math.max(
     0,
@@ -807,11 +939,11 @@ function ScoreCard({
   else if (score >= 15) level = "Low";
 
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white p-5">
+    <div className="rounded-2xl border border-stone-200 bg-white p-6">
       <div className="flex items-start justify-between">
         <div>
-          <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-stone-100 text-xs font-black">
-            {meta.icon}
+          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-stone-100 text-stone-700">
+            <ScoreIcon className="h-4 w-4" />
           </div>
 
           <p className="text-sm font-bold text-stone-700">
@@ -827,9 +959,9 @@ function ScoreCard({
         </div>
       </div>
 
-      <div className="mt-5 h-2 overflow-hidden rounded-full bg-stone-100">
+      <div className="mt-6 h-2 overflow-hidden rounded-full bg-stone-100">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-teal-400 via-orange-400 to-rose-500 transition-all duration-1000"
+          className="h-full origin-left animate-[fill-bar_550ms_ease-out] rounded-full bg-gradient-to-r from-teal-400 via-orange-400 to-rose-500"
           style={{ width: `${score}%` }}
         />
       </div>
@@ -883,7 +1015,7 @@ function Dashboard({
           LingoTrace is thinking
         </p>
 
-        <h2 className="mt-3 text-3xl font-black">
+        <h2 className="font-display mt-3 text-3xl font-black">
           Tracing your languages...
         </h2>
 
@@ -895,11 +1027,11 @@ function Dashboard({
   if (error) {
     return (
       <div className="flex w-full max-w-xl flex-1 flex-col items-center justify-center text-center">
-        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-100 text-2xl">
-          !
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-100">
+          <IconAlert className="h-7 w-7 text-rose-500" />
         </div>
 
-        <h2 className="text-3xl font-black">
+        <h2 className="font-display text-3xl font-black">
           We couldn&apos;t analyze that.
         </h2>
 
@@ -908,14 +1040,14 @@ function Dashboard({
         <div className="mt-7 flex gap-3">
           <button
             onClick={onRetry}
-            className="rounded-xl bg-stone-900 px-6 py-3 font-bold text-white"
+            className="rounded-xl bg-stone-900 px-6 py-3 font-bold text-white transition duration-150 ease-out hover:scale-[1.02] hover:shadow-warm-md"
           >
             Try again
           </button>
 
           <button
             onClick={onStartOver}
-            className="rounded-xl bg-white px-6 py-3 font-bold text-stone-600 ring-1 ring-stone-200"
+            className="rounded-xl bg-white px-6 py-3 font-bold text-stone-600 ring-1 ring-stone-200 transition duration-150 ease-out hover:scale-[1.02] hover:shadow-warm-sm"
           >
             Start over
           </button>
@@ -929,11 +1061,11 @@ function Dashboard({
   return (
     <div className="w-full max-w-5xl py-8">
       {/* Header */}
-      <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div className="mb-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <button
             onClick={onStartOver}
-            className="mb-5 text-sm font-bold text-stone-400 hover:text-stone-700"
+            className="mb-5 text-sm font-bold text-stone-400 transition-colors duration-150 hover:text-stone-700"
           >
             ← Start over
           </button>
@@ -942,43 +1074,44 @@ function Dashboard({
             Analysis complete
           </p>
 
-          <h1 className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">
+          <h1 className="font-display mt-2 text-4xl font-black tracking-tight sm:text-5xl">
             Your language fingerprint.
           </h1>
         </div>
 
-        <div className="rounded-full bg-white px-4 py-2 text-sm font-bold text-stone-600 shadow-sm ring-1 ring-stone-200">
+        <div className="rounded-full bg-white px-4 py-2 text-sm font-bold text-stone-600 shadow-warm-sm ring-1 ring-stone-200">
           Learning {targetLanguage}
         </div>
       </div>
 
       {/* Sentence hero */}
-      <section className="relative overflow-hidden rounded-[2rem] bg-stone-900 p-7 text-white shadow-2xl sm:p-10">
+      <section className="relative overflow-hidden rounded-[2rem] bg-stone-900 p-7 text-white shadow-warm-dark sm:p-10">
         <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-teal-500/20 blur-3xl" />
 
         <p className="relative text-xs font-bold uppercase tracking-[0.2em] text-stone-400">
           Your sentence
         </p>
 
-        <p className="relative mt-5 break-words text-3xl font-bold leading-tight sm:text-5xl">
+        <p className="font-display relative mt-5 break-words text-3xl font-bold leading-tight sm:text-5xl">
           “{sentence}”
         </p>
 
         {analysis.pronunciation && (
-          <p className="relative mt-5 text-base italic text-stone-400">
-            🔊 {analysis.pronunciation}
+          <p className="relative mt-6 flex items-center gap-2 text-base italic text-stone-400">
+            <IconVolume className="h-4 w-4 shrink-0" />
+            {analysis.pronunciation}
           </p>
         )}
       </section>
 
       {/* Translation */}
-      <section className="mt-5 grid gap-5 md:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-[2rem] bg-white p-7 shadow-sm ring-1 ring-stone-200 sm:p-8">
+      <section className="mt-8 grid gap-6 md:grid-cols-[1.4fr_1fr]">
+        <div className="rounded-[2rem] bg-white p-7 shadow-warm-md ring-1 ring-stone-200 sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-600">
             Natural translation
           </p>
 
-          <p className="mt-4 text-3xl font-black leading-tight text-stone-900">
+          <p className="font-display mt-4 text-3xl font-black leading-tight text-stone-900">
             {analysis.natural_translation}
           </p>
 
@@ -995,12 +1128,12 @@ function Dashboard({
           )}
         </div>
 
-        <div className="rounded-[2rem] bg-gradient-to-br from-teal-600 to-cyan-700 p-7 text-white shadow-lg sm:p-8">
+        <div className="rounded-[2rem] bg-gradient-to-br from-teal-600 to-cyan-700 p-7 text-white shadow-warm-lg sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-100">
             Likely language influence
           </p>
 
-          <p className="mt-4 text-3xl font-black">
+          <p className="font-display mt-4 text-3xl font-black">
             {analysis.primary_source_language}
           </p>
 
@@ -1014,7 +1147,7 @@ function Dashboard({
 
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/20">
               <div
-                className="h-full rounded-full bg-white transition-all duration-700"
+                className="h-full origin-left animate-[fill-bar_550ms_ease-out] rounded-full bg-white"
                 style={{
                   width: `${analysis.source_language_confidence}%`,
                 }}
@@ -1025,18 +1158,18 @@ function Dashboard({
       </section>
 
       {/* Scores */}
-      <section className="mt-5 rounded-[2rem] bg-white p-7 shadow-sm ring-1 ring-stone-200 sm:p-8">
-        <div className="mb-7">
+      <section className="mt-8 rounded-[2rem] bg-white p-7 shadow-warm-md ring-1 ring-stone-200 sm:p-8">
+        <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">
             Interference profile
           </p>
 
-          <h2 className="mt-2 text-2xl font-black">
+          <h2 className="font-display mt-2 text-2xl font-black">
             Where your other languages may be showing up.
           </h2>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-6 sm:grid-cols-2">
           {(
             Object.keys(SCORE_META) as (keyof InterferenceScores)[]
           ).map((key) => (
@@ -1050,13 +1183,13 @@ function Dashboard({
       </section>
 
       {/* Explanation */}
-      <section className="mt-5 grid gap-5 md:grid-cols-[1.3fr_0.7fr]">
-        <div className="rounded-[2rem] bg-white p-7 shadow-sm ring-1 ring-stone-200 sm:p-8">
+      <section className="mt-8 grid gap-6 md:grid-cols-[1.3fr_0.7fr]">
+        <div className="rounded-[2rem] bg-white p-7 shadow-warm-md ring-1 ring-stone-200 sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet-600">
             Linguistic insight
           </p>
 
-          <h2 className="mt-2 text-2xl font-black">
+          <h2 className="font-display mt-2 text-2xl font-black">
             What&apos;s happening?
           </h2>
 
@@ -1070,7 +1203,7 @@ function Dashboard({
             Remember this
           </p>
 
-          <p className="mt-4 text-xl font-black leading-7 text-stone-900">
+          <p className="font-display mt-4 text-xl font-black leading-7 text-stone-900">
             {analysis.key_takeaway}
           </p>
         </div>
@@ -1078,22 +1211,22 @@ function Dashboard({
 
       {/* Highlighted issues */}
       {analysis.highlighted_tokens.length > 0 && (
-        <section className="mt-5 rounded-[2rem] bg-white p-7 shadow-sm ring-1 ring-stone-200 sm:p-8">
+        <section className="mt-8 rounded-[2rem] bg-white p-7 shadow-warm-md ring-1 ring-stone-200 sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-rose-500">
             Focus areas
           </p>
 
-          <h2 className="mt-2 text-2xl font-black">
+          <h2 className="font-display mt-2 text-2xl font-black">
             The interesting bits.
           </h2>
 
-          <div className="mt-6 grid gap-3">
+          <div className="mt-7 grid gap-4">
             {analysis.highlighted_tokens.map(
               (item, index) => (
                 <button
                   key={`${item.segment}-${index}`}
                   onClick={() => setSelectedIssue(item)}
-                  className="group flex w-full items-center justify-between rounded-2xl border border-stone-200 p-5 text-left transition hover:-translate-y-0.5 hover:border-rose-200 hover:bg-rose-50"
+                  className="group flex w-full items-center justify-between rounded-2xl border border-stone-200 p-6 text-left transition duration-150 ease-out hover:-translate-y-0.5 hover:border-rose-200 hover:bg-rose-50 hover:shadow-warm-sm"
                 >
                   <div>
                     <p className="text-lg font-black">
@@ -1105,7 +1238,7 @@ function Dashboard({
                     </p>
                   </div>
 
-                  <span className="text-xl text-stone-300 transition group-hover:text-rose-500">
+                  <span className="text-xl text-stone-300 transition-colors duration-150 group-hover:text-rose-500">
                     →
                   </span>
                 </button>
@@ -1114,7 +1247,7 @@ function Dashboard({
           </div>
 
           {selectedIssue && (
-            <div className="mt-4 rounded-2xl bg-stone-900 p-6 text-white">
+            <div className="mt-5 rounded-2xl bg-stone-900 p-6 text-white">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-rose-300">
@@ -1128,9 +1261,10 @@ function Dashboard({
 
                 <button
                   onClick={() => setSelectedIssue(null)}
-                  className="text-stone-400 hover:text-white"
+                  aria-label="Close"
+                  className="text-stone-400 transition-colors duration-150 hover:text-white"
                 >
-                  ×
+                  <IconClose className="h-4 w-4" />
                 </button>
               </div>
 
@@ -1154,23 +1288,23 @@ function Dashboard({
 
       {/* Word breakdown */}
       {analysis.word_breakdown.length > 0 && (
-        <section className="mt-5 rounded-[2rem] bg-white p-7 shadow-sm ring-1 ring-stone-200 sm:p-8">
+        <section className="mt-8 rounded-[2rem] bg-white p-7 shadow-warm-md ring-1 ring-stone-200 sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-600">
             Word by word
           </p>
 
-          <h2 className="mt-2 text-2xl font-black">
+          <h2 className="font-display mt-2 text-2xl font-black">
             Pull the sentence apart.
           </h2>
 
-          <div className="mt-6 overflow-x-auto">
+          <div className="mt-7 overflow-x-auto">
             <table className="w-full min-w-[650px] text-left">
               <thead>
                 <tr className="border-b border-stone-200 text-xs uppercase tracking-wider text-stone-400">
-                  <th className="px-3 py-3">Original</th>
-                  <th className="px-3 py-3">Meaning</th>
-                  <th className="px-3 py-3">Pronunciation</th>
-                  <th className="px-3 py-3">Role</th>
+                  <th className="px-4 py-4">Original</th>
+                  <th className="px-4 py-4">Meaning</th>
+                  <th className="px-4 py-4">Pronunciation</th>
+                  <th className="px-4 py-4">Role</th>
                 </tr>
               </thead>
 
@@ -1181,19 +1315,19 @@ function Dashboard({
                       key={index}
                       className="border-b border-stone-100 last:border-0"
                     >
-                      <td className="px-3 py-4 font-black">
+                      <td className="px-4 py-5 font-black">
                         {word.original}
                       </td>
 
-                      <td className="px-3 py-4 text-stone-600">
+                      <td className="px-4 py-5 text-stone-600">
                         {word.meaning}
                       </td>
 
-                      <td className="px-3 py-4 text-stone-400">
+                      <td className="px-4 py-5 text-stone-400">
                         {word.pronunciation}
                       </td>
 
-                      <td className="px-3 py-4 text-sm text-stone-500">
+                      <td className="px-4 py-5 text-sm text-stone-500">
                         {word.grammatical_role}
                       </td>
                     </tr>
@@ -1207,21 +1341,21 @@ function Dashboard({
 
       {/* Alternatives */}
       {analysis.natural_alternatives.length > 0 && (
-        <section className="mt-5 rounded-[2rem] bg-white p-7 shadow-sm ring-1 ring-stone-200 sm:p-8">
+        <section className="mt-8 rounded-[2rem] bg-white p-7 shadow-warm-md ring-1 ring-stone-200 sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">
             Fluent alternatives
           </p>
 
-          <h2 className="mt-2 text-2xl font-black">
+          <h2 className="font-display mt-2 text-2xl font-black">
             Other natural ways to say it.
           </h2>
 
-          <div className="mt-6 grid gap-3">
+          <div className="mt-7 grid gap-4">
             {analysis.natural_alternatives.map(
               (alternative, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-4 rounded-2xl bg-stone-50 p-5"
+                  className="flex items-center gap-4 rounded-2xl bg-stone-50 p-6"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-900 text-sm font-bold text-white">
                     {index + 1}
@@ -1238,12 +1372,12 @@ function Dashboard({
       )}
 
       {/* Targeted exercise */}
-      <section className="mt-5 overflow-hidden rounded-[2rem] bg-gradient-to-br from-violet-600 to-fuchsia-600 p-7 text-white shadow-xl sm:p-8">
+      <section className="mt-8 overflow-hidden rounded-[2rem] bg-gradient-to-br from-violet-600 to-fuchsia-600 p-7 text-white shadow-warm-lg sm:p-8">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet-200">
           Targeted practice
         </p>
 
-        <h2 className="mt-2 text-2xl font-black">
+        <h2 className="font-display mt-2 text-2xl font-black">
           Train the pattern.
         </h2>
 
@@ -1254,12 +1388,12 @@ function Dashboard({
 
       {/* Interactive challenge */}
       {analysis.practice_options.length === 3 && (
-        <section className="mt-5 rounded-[2rem] bg-stone-900 p-7 text-white shadow-xl sm:p-8">
+        <section className="mt-8 rounded-[2rem] bg-stone-900 p-7 text-white shadow-warm-dark sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-300">
             Quick challenge
           </p>
 
-          <h2 className="mt-2 text-2xl font-black">
+          <h2 className="font-display mt-2 text-2xl font-black">
             Can you spot the natural form?
           </h2>
 
@@ -1267,7 +1401,7 @@ function Dashboard({
             {analysis.practice_question}
           </p>
 
-          <div className="mt-6 grid gap-3">
+          <div className="mt-7 grid gap-4">
             {analysis.practice_options.map(
               (option, index) => {
                 const isCorrect =
@@ -1277,7 +1411,7 @@ function Dashboard({
                   index === selectedAnswer;
 
                 let classes =
-                  "w-full rounded-2xl border p-4 text-left transition ";
+                  "w-full rounded-2xl border p-5 text-left transition-colors duration-300 ease-out ";
 
                 if (!checked) {
                   classes +=
@@ -1320,18 +1454,23 @@ function Dashboard({
             <button
               disabled={selectedAnswer === null}
               onClick={() => setChecked(true)}
-              className="mt-5 rounded-xl bg-white px-6 py-3 font-bold text-stone-900 disabled:cursor-not-allowed disabled:opacity-30"
+              className="mt-6 rounded-xl bg-white px-6 py-3 font-bold text-stone-900 transition duration-150 ease-out hover:scale-[1.02] disabled:cursor-not-allowed disabled:scale-100 disabled:opacity-30"
             >
               Check answer
             </button>
           )}
 
           {checked && (
-            <div className="mt-5 rounded-2xl bg-white/10 p-5">
-              <p className="font-black">
-                {selectedAnswer === analysis.practice_answer
-                  ? "🎉 Correct!"
-                  : "Not quite — keep learning!"}
+            <div className="mt-6 rounded-2xl bg-white/10 p-5">
+              <p className="flex items-center gap-2 font-black">
+                {selectedAnswer === analysis.practice_answer ? (
+                  <>
+                    <IconCheckCircle className="h-5 w-5 text-emerald-400" />
+                    Correct!
+                  </>
+                ) : (
+                  "Not quite — keep learning!"
+                )}
               </p>
 
               <p className="mt-2 leading-7 text-stone-300">
@@ -1343,10 +1482,10 @@ function Dashboard({
       )}
 
       {/* Bottom */}
-      <div className="mt-10 flex justify-center">
+      <div className="mt-12 flex justify-center">
         <button
           onClick={onTryAnother}
-          className="rounded-2xl bg-white px-7 py-3.5 font-bold text-stone-800 shadow-sm ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:shadow-md"
+          className="rounded-2xl bg-white px-7 py-3.5 font-bold text-stone-800 shadow-warm-sm ring-1 ring-stone-200 transition duration-150 ease-out hover:scale-[1.02] hover:shadow-warm-md"
         >
           Trace another sentence →
         </button>
