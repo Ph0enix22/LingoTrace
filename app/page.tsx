@@ -376,7 +376,34 @@ const LANGUAGES = [
   "Italian",
 ];
 
-const CHALLENGE_PROMPT = "Introduce yourself to a new friend.";
+type Scenario = {
+  id: string;
+  label: string;
+  prompt: string;
+};
+
+const SCENARIOS: Scenario[] = [
+  {
+    id: "introduce",
+    label: "New friend",
+    prompt: "Introduce yourself to a new friend.",
+  },
+  {
+    id: "late",
+    label: "Running late",
+    prompt: "You just arrived late to a friend's house — explain why.",
+  },
+  {
+    id: "restaurant",
+    label: "Lost in translation",
+    prompt: "You're ordering food and the waiter doesn't understand you — try again.",
+  },
+  {
+    id: "parents",
+    label: "Meeting the parents",
+    prompt: "You're meeting your partner's parents for the first time.",
+  },
+];
 
 type Sample = {
   label: string;
@@ -461,6 +488,7 @@ export default function Home() {
   const [knownLanguages, setKnownLanguages] = useState<string[]>([]);
   const [targetLanguage, setTargetLanguage] = useState<string | null>(null);
   const [sentence, setSentence] = useState("");
+  const [scenario, setScenario] = useState<Scenario>(SCENARIOS[0]);
 
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
 
@@ -497,6 +525,7 @@ export default function Home() {
           knownLanguages,
           targetLanguage,
           sentence,
+          scenario: scenario.prompt,
         }),
       });
 
@@ -539,6 +568,7 @@ export default function Home() {
     setKnownLanguages([]);
     setTargetLanguage(null);
     setSentence("");
+    setScenario(SCENARIOS[0]);
     setAnalysis(null);
     setError(null);
     setScreen("landing");
@@ -593,6 +623,8 @@ export default function Home() {
             targetLanguage={targetLanguage}
             sentence={sentence}
             onChangeSentence={setSentence}
+            scenario={scenario}
+            onSelectScenario={setScenario}
             onBack={() => setScreen("profile")}
             onAnalyze={handleAnalyze}
             onUseSample={handleUseSample}
@@ -819,10 +851,50 @@ function Profile({
    CHALLENGE
 ------------------------------------------------------- */
 
+function ScenarioCard({
+  scenario,
+  selected,
+  onClick,
+}: {
+  scenario: Scenario;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-2xl p-4 text-left transition-colors duration-300 ease-out ${
+        selected
+          ? "bg-stone-900 text-white shadow-warm-md"
+          : "bg-white text-stone-700 shadow-warm-sm ring-1 ring-stone-200 hover:ring-stone-300"
+      }`}
+    >
+      <span
+        className={`text-sm font-bold ${
+          selected ? "text-white" : "text-stone-900"
+        }`}
+      >
+        {scenario.label}
+      </span>
+
+      <p
+        className={`mt-1 line-clamp-2 text-xs leading-5 ${
+          selected ? "text-stone-300" : "text-stone-500"
+        }`}
+      >
+        {scenario.prompt}
+      </p>
+    </button>
+  );
+}
+
 function Challenge({
   targetLanguage,
   sentence,
   onChangeSentence,
+  scenario,
+  onSelectScenario,
   onBack,
   onAnalyze,
   onUseSample,
@@ -830,6 +902,8 @@ function Challenge({
   targetLanguage: string;
   sentence: string;
   onChangeSentence: (s: string) => void;
+  scenario: Scenario;
+  onSelectScenario: (scenario: Scenario) => void;
   onBack: () => void;
   onAnalyze: () => void;
   onUseSample: (sample: Sample) => void;
@@ -848,6 +922,23 @@ function Challenge({
         Don&apos;t overthink it. Write the sentence the way
         you would naturally say it.
       </p>
+
+      <div className="mt-6">
+        <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
+          Pick a scenario:
+        </span>
+
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {SCENARIOS.map((s) => (
+            <ScenarioCard
+              key={s.id}
+              scenario={s}
+              selected={scenario.id === s.id}
+              onClick={() => onSelectScenario(s)}
+            />
+          ))}
+        </div>
+      </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
         <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
@@ -871,8 +962,11 @@ function Challenge({
             {targetLanguage}
           </span>
 
-          <p className="mt-4 text-lg font-bold">
-            {CHALLENGE_PROMPT}
+          <p
+            key={scenario.id}
+            className="mt-4 animate-[fade-slide-in_300ms_ease-out] text-lg font-bold"
+          >
+            {scenario.prompt}
           </p>
         </div>
 

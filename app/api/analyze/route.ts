@@ -13,12 +13,14 @@ const analysisCache = new Map<string, unknown>();
 function buildCacheKey(
   languages: string[],
   target: string,
-  sentence: string
+  sentence: string,
+  scenario: string
 ) {
   return JSON.stringify({
     languages: [...languages].map((l) => l.toLowerCase()).sort(),
     target: target.toLowerCase(),
     sentence,
+    scenario,
   });
 }
 
@@ -44,6 +46,8 @@ export async function POST(req: NextRequest) {
     const knownLanguages = body?.knownLanguages;
     const targetLanguage = body?.targetLanguage;
     const sentence = body?.sentence;
+    const scenario =
+      typeof body?.scenario === "string" ? body.scenario.trim() : "";
 
     if (!Array.isArray(knownLanguages) || knownLanguages.length === 0) {
       return NextResponse.json(
@@ -112,7 +116,7 @@ export async function POST(req: NextRequest) {
     const target = targetLanguage.trim();
     const learnerSentence = sentence.trim();
 
-    const cacheKey = buildCacheKey(languages, target, learnerSentence);
+    const cacheKey = buildCacheKey(languages, target, learnerSentence, scenario);
     const cached = analysisCache.get(cacheKey);
 
     if (cached) {
@@ -142,6 +146,7 @@ IMPORTANT RULES:
 9. Preserve the learner's intended meaning when suggesting alternatives.
 10. If the sentence is already natural, clearly say that.
 11. The primary source language should be "none" when evidence is insufficient.
+12. If a SCENARIO is given below, it describes the roleplay situation the learner was responding to. Let it naturally inform your explanation, key_takeaway, targeted_exercise, and practice_question where relevant (e.g. referencing the situation), but do not let it distract from the linguistic analysis itself.
 
 <learner_data>
 
@@ -150,7 +155,7 @@ ${languages.join(", ")}
 
 TARGET LANGUAGE:
 ${target}
-
+${scenario ? `\nSCENARIO:\n${scenario}\n` : ""}
 LEARNER SENTENCE:
 ${learnerSentence}
 
