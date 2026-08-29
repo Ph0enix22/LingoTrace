@@ -353,7 +353,7 @@ function MicButton({
   );
 }
 
-type Screen = "landing" | "profile" | "challenge" | "dashboard";
+type Screen = "landing" | "profile" | "challenge" | "dashboard" | "comparison";
 
 type InterferenceScores = {
   word_order: number;
@@ -482,30 +482,6 @@ const SAMPLES: Sample[] = [
   },
 ];
 
-const ANALYSIS_STEPS = [
-  "Checking word order...",
-  "Checking vocabulary...",
-  "Checking register...",
-  "Checking grammar...",
-];
-
-function AnalyzingStatus() {
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setIndex((i) => (i + 1) % ANALYSIS_STEPS.length);
-    }, 2200);
-    return () => clearInterval(id);
-  }, []);
-
-  return (
-    <p className="mt-3 max-w-md text-stone-500 transition-opacity duration-300">
-      {ANALYSIS_STEPS[index]}
-    </p>
-  );
-}
-
 function overallAverage(scores: InterferenceScores): number {
   return (
     (scores.word_order + scores.vocabulary + scores.register + scores.grammar) /
@@ -551,6 +527,15 @@ export default function Home() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareLanguages, setCompareLanguages] = useState<string[]>([]);
+  const [comparison, setComparison] = useState<{
+    a: AnalysisResult;
+    b: AnalysisResult;
+  } | null>(null);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+  const [comparisonError, setComparisonError] = useState<string | null>(null);
 
   function toggleKnownLanguage(lang: string) {
     setKnownLanguages((prev) =>
@@ -616,10 +601,79 @@ export default function Home() {
     setSentence(sample.sentence);
   }
 
+  function handleToggleCompareMode() {
+    setCompareMode((prev) => !prev);
+    setCompareLanguages([]);
+    setComparison(null);
+    setComparisonError(null);
+  }
+
+  function toggleCompareLanguage(lang: string) {
+    setCompareLanguages((prev) =>
+      prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang]
+    );
+  }
+
+  async function handleCompare() {
+    if (!sentence.trim() || compareLanguages.length === 0) return;
+
+    setScreen("comparison");
+    setComparisonLoading(true);
+    setComparisonError(null);
+    setComparison(null);
+
+    try {
+      const body = (languages: string[]) =>
+        JSON.stringify({
+          knownLanguages: languages,
+          targetLanguage,
+          sentence,
+          scenario: scenario.prompt,
+        });
+
+      const [resA, resB] = await Promise.all([
+        fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: body(knownLanguages),
+        }),
+        fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: body(compareLanguages),
+        }),
+      ]);
+
+      const [dataA, dataB] = await Promise.all([resA.json(), resB.json()]);
+
+      if (!resA.ok || !resB.ok) {
+        throw new Error(
+          dataA?.error || dataB?.error || "The comparison request failed."
+        );
+      }
+
+      setComparison({
+        a: dataA as AnalysisResult,
+        b: dataB as AnalysisResult,
+      });
+    } catch (err) {
+      console.error(err);
+      setComparisonError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong comparing profiles."
+      );
+    } finally {
+      setComparisonLoading(false);
+    }
+  }
+
   function handleTryAnother() {
     setSentence("");
     setAnalysis(null);
     setError(null);
+    setComparison(null);
+    setComparisonError(null);
     setScreen("challenge");
   }
 
@@ -631,6 +685,10 @@ export default function Home() {
     setAnalysis(null);
     setSessionHistory([]);
     setError(null);
+    setCompareMode(false);
+    setCompareLanguages([]);
+    setComparison(null);
+    setComparisonError(null);
     setScreen("landing");
   }
 
@@ -688,6 +746,11 @@ export default function Home() {
             onBack={() => setScreen("profile")}
             onAnalyze={handleAnalyze}
             onUseSample={handleUseSample}
+            compareMode={compareMode}
+            onToggleCompareMode={handleToggleCompareMode}
+            compareLanguages={compareLanguages}
+            onToggleCompareLanguage={toggleCompareLanguage}
+            onCompare={handleCompare}
           />
         )}
 
@@ -700,6 +763,20 @@ export default function Home() {
             analysis={analysis}
             sessionHistory={sessionHistory}
             onRetry={handleAnalyze}
+            onTryAnother={handleTryAnother}
+            onStartOver={handleStartOver}
+          />
+        )}
+
+        {screen === "comparison" && targetLanguage && (
+          <ComparisonDashboard
+            sentence={sentence}
+            targetLanguage={targetLanguage}
+            languagesA={knownLanguages}
+            languagesB={compareLanguages}
+            loading={comparisonLoading}
+            error={comparisonError}
+            comparison={comparison}
             onTryAnother={handleTryAnother}
             onStartOver={handleStartOver}
           />
@@ -959,6 +1036,11 @@ function Challenge({
   onBack,
   onAnalyze,
   onUseSample,
+  compareMode,
+  onToggleCompareMode,
+  compareLanguages,
+  onToggleCompareLanguage,
+  onCompare,
 }: {
   targetLanguage: string;
   sentence: string;
@@ -968,7 +1050,14 @@ function Challenge({
   onBack: () => void;
   onAnalyze: () => void;
   onUseSample: (sample: Sample) => void;
+  compareMode: boolean;
+  onToggleCompareMode: () => void;
+  compareLanguages: string[];
+  onToggleCompareLanguage: (lang: string) => void;
+  onCompare: () => void;
 }) {
+  const compareOptions = LANGUAGES.filter((lang) => lang !== targetLanguage);
+  const canCompare = sentence.trim().length > 0 && compareLanguages.length > 0;
   return (
     <div className="flex w-full max-w-3xl flex-1 flex-col justify-center py-10">
       <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-teal-600">
@@ -1017,6 +1106,42 @@ function Challenge({
         ))}
       </div>
 
+      <div className="mt-5">
+        <button
+          type="button"
+          onClick={onToggleCompareMode}
+          className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-colors duration-300 ease-out ${
+            compareMode
+              ? "bg-stone-900 text-white shadow-warm-sm"
+              : "bg-white text-stone-600 shadow-warm-sm ring-1 ring-stone-200 hover:ring-stone-300"
+          }`}
+        >
+          <IconSwap className="h-3.5 w-3.5" />
+          {compareMode
+            ? "Comparing against a second profile"
+            : "Compare with a second profile"}
+        </button>
+
+        {compareMode && (
+          <div className="mt-3 animate-[fade-slide-in_250ms_ease-out] rounded-2xl bg-white p-5 shadow-warm-sm ring-1 ring-stone-200">
+            <p className="text-xs font-bold uppercase tracking-wider text-stone-400">
+              Second profile&apos;s known languages
+            </p>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {compareOptions.map((lang) => (
+                <LanguageChip
+                  key={lang}
+                  label={lang}
+                  selected={compareLanguages.includes(lang)}
+                  onClick={() => onToggleCompareLanguage(lang)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="mt-6 overflow-hidden rounded-3xl bg-white shadow-warm-lg ring-1 ring-stone-200">
         <div className="border-b border-stone-100 bg-stone-50 px-7 py-5">
           <span className="rounded-full bg-teal-100 px-3 py-1.5 text-xs font-bold text-teal-700">
@@ -1048,13 +1173,23 @@ function Challenge({
             {sentence.length} characters
           </span>
 
-          <button
-            onClick={onAnalyze}
-            disabled={!sentence.trim()}
-            className="rounded-xl bg-stone-900 px-7 py-3 font-bold text-white transition duration-150 ease-out hover:scale-[1.02] hover:shadow-warm-md disabled:cursor-not-allowed disabled:scale-100 disabled:bg-stone-200 disabled:text-stone-400 disabled:shadow-none"
-          >
-            Trace my sentence →
-          </button>
+          {compareMode ? (
+            <button
+              onClick={onCompare}
+              disabled={!canCompare}
+              className="rounded-xl bg-stone-900 px-7 py-3 font-bold text-white transition duration-150 ease-out hover:scale-[1.02] hover:shadow-warm-md disabled:cursor-not-allowed disabled:scale-100 disabled:bg-stone-200 disabled:text-stone-400 disabled:shadow-none"
+            >
+              Compare profiles →
+            </button>
+          ) : (
+            <button
+              onClick={onAnalyze}
+              disabled={!sentence.trim()}
+              className="rounded-xl bg-stone-900 px-7 py-3 font-bold text-white transition duration-150 ease-out hover:scale-[1.02] hover:shadow-warm-md disabled:cursor-not-allowed disabled:scale-100 disabled:bg-stone-200 disabled:text-stone-400 disabled:shadow-none"
+            >
+              Trace my sentence →
+            </button>
+          )}
         </div>
       </div>
 
@@ -2279,6 +2414,176 @@ function Dashboard({
           onClose={() => setShareOpen(false)}
         />
       )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------
+   COMPARISON MODE — same sentence analyzed against two
+   different known-language profiles, side by side. Two
+   parallel calls to the existing /api/analyze endpoint;
+   no new backend route needed.
+------------------------------------------------------- */
+
+function ComparisonResultPanel({
+  label,
+  languages,
+  loading,
+  analysis,
+}: {
+  label: string;
+  languages: string[];
+  loading: boolean;
+  analysis: AnalysisResult | null;
+}) {
+  return (
+    <div className="rounded-[2rem] bg-white p-6 shadow-warm-md ring-1 ring-stone-200 sm:p-7">
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-600">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-bold text-stone-500">
+        {languages.length > 0 ? languages.join(" + ") : "No languages selected"}
+      </p>
+
+      {loading && (
+        <div className="mt-10 flex flex-col items-center justify-center gap-3 py-10 text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-stone-200 border-t-teal-500" />
+          <p className="text-xs font-semibold text-stone-400">Analyzing...</p>
+        </div>
+      )}
+
+      {!loading && analysis && (
+        <>
+          <div className="mt-5 rounded-2xl bg-stone-50 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+              Likely influence
+            </p>
+            <p className="font-display mt-1 text-xl font-black text-stone-900">
+              {analysis.primary_source_language}
+            </p>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-4">
+            {(Object.keys(SCORE_META) as (keyof InterferenceScores)[]).map(
+              (key) => (
+                <ScoreCard
+                  key={key}
+                  scoreKey={key}
+                  value={analysis.interference_scores[key]}
+                />
+              )
+            )}
+          </div>
+
+          <div className="mt-5 border-t border-stone-100 pt-5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+              Explanation
+            </p>
+            <p className="mt-2 text-sm leading-6 text-stone-600">
+              {analysis.explanation}
+            </p>
+          </div>
+
+          <div className="mt-5 rounded-2xl bg-amber-100 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
+              Remember this
+            </p>
+            <p className="mt-1 text-sm font-bold text-stone-900">
+              {analysis.key_takeaway}
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ComparisonDashboard({
+  sentence,
+  targetLanguage,
+  languagesA,
+  languagesB,
+  loading,
+  error,
+  comparison,
+  onTryAnother,
+  onStartOver,
+}: {
+  sentence: string;
+  targetLanguage: string;
+  languagesA: string[];
+  languagesB: string[];
+  loading: boolean;
+  error: string | null;
+  comparison: { a: AnalysisResult; b: AnalysisResult } | null;
+  onTryAnother: () => void;
+  onStartOver: () => void;
+}) {
+  return (
+    <div className="w-full max-w-6xl py-8">
+      <div className="mb-10">
+        <button
+          onClick={onStartOver}
+          className="mb-5 text-sm font-bold text-stone-400 transition-colors duration-150 hover:text-stone-700"
+        >
+          ← Start over
+        </button>
+
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-600">
+          Comparison
+        </p>
+
+        <h1 className="font-display mt-2 text-4xl font-black tracking-tight sm:text-5xl">
+          Two profiles, one sentence.
+        </h1>
+      </div>
+
+      <section className="relative overflow-hidden rounded-[2rem] bg-stone-900 p-7 text-white shadow-warm-dark sm:p-10">
+        <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-teal-500/20 blur-3xl" />
+
+        <p className="relative text-xs font-bold uppercase tracking-[0.2em] text-stone-400">
+          Your sentence
+        </p>
+
+        <p className="font-display relative mt-5 break-words text-3xl font-bold leading-tight sm:text-5xl">
+          “{sentence}”
+        </p>
+
+        <p className="relative mt-4 text-sm font-semibold text-stone-400">
+          Target language: {targetLanguage}
+        </p>
+      </section>
+
+      {error && (
+        <div className="mt-8 flex items-center gap-3 rounded-2xl bg-rose-50 p-6 text-rose-600">
+          <IconAlert className="h-5 w-5 shrink-0" />
+          <p className="text-sm font-semibold">{error}</p>
+        </div>
+      )}
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <ComparisonResultPanel
+          label="Profile A"
+          languages={languagesA}
+          loading={loading}
+          analysis={comparison?.a ?? null}
+        />
+        <ComparisonResultPanel
+          label="Profile B"
+          languages={languagesB}
+          loading={loading}
+          analysis={comparison?.b ?? null}
+        />
+      </div>
+
+      <div className="mt-12 flex justify-center">
+        <button
+          onClick={onTryAnother}
+          className="rounded-2xl bg-white px-7 py-3.5 font-bold text-stone-800 shadow-warm-sm ring-1 ring-stone-200 transition duration-150 ease-out hover:scale-[1.02] hover:shadow-warm-md"
+        >
+          Try another sentence →
+        </button>
+      </div>
     </div>
   );
 }

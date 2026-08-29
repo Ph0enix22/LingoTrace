@@ -547,10 +547,24 @@ Be linguistically cautious. Distinguish genuine cross-linguistic interference fr
   } catch (error: unknown) {
     console.error("💥 BACKEND ERROR IN /api/analyze:", error);
 
-    const message =
+    let message =
       error instanceof Error
         ? error.message
         : "Unknown server error.";
+
+    // The Gemini SDK sometimes throws with a raw JSON string as the
+    // message (e.g. an upstream 503 comes through as the literal text
+    // `{"error":{"code":503,"message":"...","status":"UNAVAILABLE"}}`).
+    // Unwrap it so the client shows a human-readable message instead of
+    // raw JSON.
+    try {
+      const parsed = JSON.parse(message);
+      if (typeof parsed?.error?.message === "string") {
+        message = parsed.error.message;
+      }
+    } catch {
+      // Not JSON — leave message as-is.
+    }
 
     return NextResponse.json(
       {
